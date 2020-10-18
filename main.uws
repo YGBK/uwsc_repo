@@ -12,7 +12,7 @@ DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 DIM IMG_PATH[] = "../../img/Azur Lane/start_stage.png","../../img/Azur Lane/sortie_button1.png","../../img/Azur Lane/sortie_button2.png","../../img/Azur Lane/enemy.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png","../../img/Azur Lane/boss.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png"
 DIM MAX_PROCESS_NUM = LENGTH(IMG_PATH) - 1 //処理する段階の最大値
 
-DIM ERROR_IMG_PATH[] = "../../img/Azur Lane/title_page.png","../../img/Azur Lane/sortie_button_on_menu.png"
+DIM ERROR_IMG_PATH[] = "../../img/Azur Lane/title_page.png","../../img/Azur Lane/title_page.png","../../img/Azur Lane/sortie_button_on_menu.png"
 DIM RETURN_PROCESS_NUM = LENGTH(ERROR_IMG_PATH) - 1
 
 DIM IS_ERROR = FALSE
@@ -57,9 +57,11 @@ REPEAT
     ENDIF
 UNTIL !IS_ERROR
 
-IF !IS_ERROR THEN MSGBOX("処理完了")
-ELSE THEN MSGBOX("処理失敗")
-
+IFB !IS_ERROR 
+     MSGBOX("処理完了")
+ELSE
+     MSGBOX("処理失敗")
+ENDIF
 
 
 PROCEDURE DO_PROCESS(VAR P_NUM)
