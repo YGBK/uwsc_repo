@@ -12,34 +12,54 @@ DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 DIM IMG_PATH[] = "../../img/Azur Lane/start_stage.png","../../img/Azur Lane/sortie_button1.png","../../img/Azur Lane/sortie_button2.png","../../img/Azur Lane/enemy.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png","../../img/Azur Lane/boss.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png"
 DIM MAX_PROCESS_NUM = LENGTH(IMG_PATH) - 1 //処理する段階の最大値
 
-FOR I=1 TO CNT
-    PRINT I + "週目開始"
-    FOR PROCESS_NUM = 0 TO MAX_PROCESS_NUM
-        PRINT PROCESS_NUM + "番目の処理を開始"
+DIM ERROR_IMG_PATH[] = "../../img/Azur Lane/title_page.png","../../img/Azur Lane/sortie_button_on_menu.png"
+DIM RETURN_PROCESS_NUM = LENGTH(ERROR_IMG_PATH) - 1
 
-        DIM FAIL_CNT = 0
-        REPEAT
-            IFB FAIL_CNT > 20 
-                PRINT "エラー"
-                EXITEXIT
-            ENDIF
+DIM IS_ERROR = FALSE
 
-            startup_chkimgx() //CHKIMGX関数開始
-            DIM IS_IMG = CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
-            shutdown_chkimgx() //CHKIMGX関数停止
+REPEAT
+    FOR I=1 TO CNT
+        PRINT I + "週目開始"
 
-            IF FAIL_CNT > 0 THEN SLEEP(10)
+        FOR PROCESS_NUM = 0 TO MAX_PROCESS_NUM
+            PRINT  I + "-" + PROCESS_NUM + "番目の処理を開始"
+        
+            DIM FAIL_CNT = 0
+            REPEAT
+                IFB FAIL_CNT > 20 
+                    PRINT "エラー発生"
+                    IS_ERROR = TRUE
+                    BREAK 3
+                ENDIF
+
+                startup_chkimgx() //CHKIMGX関数開始
+                DIM IS_IMG = CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                shutdown_chkimgx() //CHKIMGX関数停止
+
+                IF FAIL_CNT > 0 THEN SLEEP(10)
             
-            FAIL_CNT = FAIL_CNT + 1
-        UNTIL IS_IMG
+                FAIL_CNT = FAIL_CNT + 1
+            UNTIL IS_IMG
 
-        DO_PROCESS(PROCESS_NUM)
-        PRINT PROCESS_NUM + "番目の処理を終了"
+            DO_PROCESS(PROCESS_NUM)
+            PRINT I + "-" + PROCESS_NUM + "番目の処理を終了"
+        NEXT
+
+        PRINT I + "週目終了"
     NEXT
-    PRINT I + "週目終了"
-NEXT
 
-MSGBOX("処理完了")
+    IFB IS_ERROR
+        IFB RETURN_PROCESS()
+            IS_ERROR = FALSE
+        ELSE
+            BREAK
+        ENDIF
+    ENDIF
+UNTIL !IS_ERROR
+
+IF !IS_ERROR THEN MSGBOX("処理完了")
+ELSE THEN MSGBOX("処理失敗")
+
 
 
 PROCEDURE DO_PROCESS(VAR P_NUM)
@@ -53,4 +73,27 @@ PROCEDURE DO_PROCESS(VAR P_NUM)
     ELSE 
         SLEEP(1)
     ENDIF
+FEND
+
+FUNCTION RETURN_PROCESS()
+    FOR I = 0 TO RETURN_PROCESS_NUM
+        
+            DIM FAIL_CNT = 0
+            REPEAT
+                IFB FAIL_CNT > 20 
+                RESULT = FALSE
+                EXIT
+                ENDIF
+
+                startup_chkimgx() //CHKIMGX関数開始
+                DIM IS_IMG = CHKIMGX(ERROR_IMG_PATH[I], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                shutdown_chkimgx() //CHKIMGX関数停止
+
+                IF FAIL_CNT > 0 THEN SLEEP(10)
+            
+                FAIL_CNT = FAIL_CNT + 1
+            UNTIL IS_IMG
+    NEXT
+
+    RESULT = TRUE
 FEND
