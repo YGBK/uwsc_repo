@@ -1,0 +1,56 @@
+CALL ChkImgX.uws
+
+DIM CNT = INPUT("周回数を入力してください")
+
+DIM WIN_ID = GETID("NoxPlayer", "Qt5QWindowIcon")
+DIM WIN_X = STATUS(WIN_ID, ST_X)
+DIM WIN_Y = STATUS(WIN_ID, ST_Y)
+DIM WIN_W = STATUS(WIN_ID, ST_WIDTH)
+DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
+
+//使う画像のパスを処理の順番に並べている
+DIM IMG_PATH[] = "../../img/Azur Lane/start_stage.png","../../img/Azur Lane/sortie_button1.png","../../img/Azur Lane/sortie_button2.png","../../img/Azur Lane/enemy.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png","../../img/Azur Lane/boss.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png"
+DIM MAX_PROCESS_NUM = LENGTH(IMG_PATH) - 1 //処理する段階の最大値
+
+FOR I=1 TO CNT
+    PRINT I + "週目開始"
+    FOR PROCESS_NUM = 0 TO MAX_PROCESS_NUM
+        PRINT PROCESS_NUM + "番目の処理を開始"
+
+        DIM FAIL_CNT = 0
+        REPEAT
+            IFB FAIL_CNT > 20 
+                PRINT "エラー"
+                EXITEXIT
+            ENDIF
+
+            startup_chkimgx() //CHKIMGX関数開始
+            DIM IS_IMG = CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+            shutdown_chkimgx() //CHKIMGX関数停止
+
+            IF FAIL_CNT > 0 THEN SLEEP(10)
+            
+            FAIL_CNT = FAIL_CNT + 1
+        UNTIL IS_IMG
+
+        DO_PROCESS(PROCESS_NUM)
+        PRINT PROCESS_NUM + "番目の処理を終了"
+    NEXT
+    PRINT I + "週目終了"
+NEXT
+
+MSGBOX("処理完了")
+
+
+PROCEDURE DO_PROCESS(VAR P_NUM)
+    DIM OFFSET =10
+
+    BTN(LEFT,CLICK,G_IMGX_X + OFFSET,G_IMGX_Y + OFFSET)
+    IFB P_NUM = 2 OR P_NUM = 6
+        SLEEP(8)
+    ELSEIF P_NUM = 3 
+        SLEEP(15)
+    ELSE 
+        SLEEP(1)
+    ENDIF
+FEND
