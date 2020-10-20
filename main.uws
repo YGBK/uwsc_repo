@@ -17,17 +17,26 @@ DIM RETURN_PROCESS_NUM = LENGTH(ERROR_IMG_PATH) - 1
 
 DIM IS_ERROR = FALSE
 
+IFB !FOPEN("./log.txt", F_EXISTS)
+   DOSCMD("echo >./myTest.txt")
+ELSE
+
+ dim FILE_ID = FOPEN("./myTest.txt",F_WRITE);
+
 REPEAT
     FOR I=1 TO CNT
         PRINT I + "週目開始"
+        FPUT(FILE_ID,I + "週目開始")
 
         FOR PROCESS_NUM = 0 TO MAX_PROCESS_NUM
             PRINT  I + "-" + PROCESS_NUM + "番目の処理を開始"
+            FPUT(FILE_ID,I + "-" + PROCESS_NUM + "番目の処理を開始")
         
             DIM FAIL_CNT = 0
             REPEAT
                 IFB FAIL_CNT > 20 
                     PRINT "エラー発生"
+                    FPUT(FILE_ID,"エラー発生")
                     IS_ERROR = TRUE
                     BREAK 3
                 ENDIF
@@ -43,9 +52,11 @@ REPEAT
 
             DO_PROCESS(PROCESS_NUM)
             PRINT I + "-" + PROCESS_NUM + "番目の処理を終了"
+            FPUT(FILE_ID,I + "-" + PROCESS_NUM + "番目の処理を終了");
         NEXT
 
         PRINT I + "週目終了"
+        FPUT(FILE_ID,I + "週目終了")
     NEXT
 
     IFB IS_ERROR
@@ -59,9 +70,13 @@ UNTIL !IS_ERROR
 
 IFB !IS_ERROR 
      MSGBOX("処理完了")
+     FPUT(FILE_ID,"処理完了")
 ELSE
      MSGBOX("処理失敗")
+     FPUT(FILE_ID,"処理失敗")
 ENDIF
+
+fclose();
 
 
 PROCEDURE DO_PROCESS(VAR P_NUM)
