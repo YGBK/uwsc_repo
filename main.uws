@@ -12,16 +12,20 @@ DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 DIM IMG_PATH[] = "../../img/Azur Lane/start_stage.png","../../img/Azur Lane/sortie_button1.png","../../img/Azur Lane/sortie_button2.png","../../img/Azur Lane/enemy.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png","../../img/Azur Lane/boss.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png"
 DIM MAX_PROCESS_NUM = LENGTH(IMG_PATH) - 1 //処理する段階の最大値
 
+//エラー発生時の復帰処理に使う画像
 DIM ERROR_IMG_PATH[] = "../../img/Azur Lane/title_page.png","../../img/Azur Lane/title_page.png","../../img/Azur Lane/sortie_button_on_menu.png"
 DIM RETURN_PROCESS_NUM = LENGTH(ERROR_IMG_PATH) - 1
 
 DIM IS_ERROR = FALSE
 
-IFB !FOPEN("./log.txt", F_EXISTS)
+//ログファイルの準備
+GETTIME()
+IFB !FOPEN("./log_"+G_TIME_YY + G_TIME_MM + G_TIME_DD +".txt", F_EXISTS)
    DOSCMD("echo >./log.txt")
 ENDIF
 
- dim FILE_ID = FOPEN("./log.txt",F_WRITE);
+ DIM FILE_ID = FOPEN("./log_"+G_TIME_YY + G_TIME_MM + G_TIME_DD +".txt",F_WRITE);
+
 
 REPEAT
     FOR I=1 TO CNT
@@ -78,7 +82,7 @@ ENDIF
 
 FCLOSE(FILE_ID);
 
-
+//処理
 PROCEDURE DO_PROCESS(VAR P_NUM)
     DIM OFFSET =10
 
@@ -92,6 +96,7 @@ PROCEDURE DO_PROCESS(VAR P_NUM)
     ENDIF
 FEND
 
+//エラー発生時の復帰処理
 FUNCTION RETURN_PROCESS(R_NUM,ERROR_IMG_PATH[], WIN_ID,  WIN_X, WIN_Y, WIN_W, WIN_H)
     FOR I = 0 TO R_NUM
         
