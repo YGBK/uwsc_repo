@@ -9,43 +9,52 @@ DIM WIN_W = STATUS(WIN_ID, ST_WIDTH)
 DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 
 //使う画像のパスを処理の順番に並べている
-DIM IMG_PATH[] = "../../img/Azur Lane/start_stage.png","../../img/Azur Lane/sortie_button1.png","../../img/Azur Lane/sortie_button2.png","../../img/Azur Lane/enemy.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png","../../img/Azur Lane/boss.png","../../img/Azur Lane/result.png","../../img/Azur Lane/get_item.png","../../img/Azur Lane/confirm_button1.png"
-DIM MAX_PROCESS_NUM = LENGTH(IMG_PATH) - 1 //処理する段階の最大値
-
-//エラー発生時の復帰処理に使う画像
-DIM ERROR_IMG_PATH[] = "../../img/Azur Lane/title_page.png","../../img/Azur Lane/title_page.png","../../img/Azur Lane/sortie_button_on_menu.png"
-DIM RETURN_PROCESS_NUM = LENGTH(ERROR_IMG_PATH) - 1
+DIM IMG_PATH[] = "start_stage.png", "sortie_button1.png", "sortie_button2.png", "enemy.png", "result.png", "get_item.png", "confirm_button1.png", "boss.png", "result.png", "get_item.png", "confirm_button1.png"
+INIT_IMG_PATH(IMG_PATH)
 
 DIM IS_ERROR = FALSE
+DIM NOW_PROCESS_NUM = 0 //エラー発生時に復帰する処理を保持する変数
 
 //ログファイルの準備
 GETTIME()
-IFB !FOPEN("./log_"+G_TIME_YY + G_TIME_MM + G_TIME_DD +".txt", F_EXISTS)
-   DOSCMD("echo >./log.txt")
-ENDIF
+DIM LOG_DIR_PATH = "../log_dir/"
 
- DIM FILE_ID = FOPEN("./log_"+G_TIME_YY + G_TIME_MM + G_TIME_DD +".txt",F_WRITE);
+FOR LOG_FILE_NUM = 1 TO 100
+    DIM LOG_FILE_NAME = LOG_DIR_PATH + "log_"+G_TIME_YY + G_TIME_MM + G_TIME_DD +"_"+LOG_FILE_NUM+".txt"
+    IFB !FOPEN(LOG_FILE_NAME, F_EXISTS)
+        //ファイル作成
+        DOSCMD("echo >"+LOG_FILE_NAME)
+        BREAK
+    ENDIF
+NEXT
 
+DIM FILE_ID = FOPEN(LOG_FILE_NAME,F_WRITE);
 
 REPEAT
     FOR I=1 TO CNT
-        PRINT I + "週目開始"
-        FPUT(FILE_ID,I + "週目開始")
+        DIM MSG = I + "週目開始"
+        PRINT MSG
+        FPUT(FILE_ID,MSG)
 
-        FOR PROCESS_NUM = 0 TO MAX_PROCESS_NUM
-            PRINT  I + "-" + PROCESS_NUM + "番目の処理を開始"
-            FPUT(FILE_ID,I + "-" + PROCESS_NUM + "番目の処理を開始")
+        FOR PROCESS_NUM = NOW_PROCESS_NUM TO LENGTH(IMG_PATH) - 1
+            MSG = I + "-" + PROCESS_NUM + "番目の処理を開始"
+            PRINT  MSG
+            FPUT(FILE_ID,MSG)
         
             DIM FAIL_CNT = 0
             REPEAT
                 IFB FAIL_CNT > 20 
-                    PRINT "エラー発生"
-                    FPUT(FILE_ID,"エラー発生")
+                    MSG = "エラー発生"
+                    PRINT MSG
+                    FPUT(FILE_ID,MSG)
+
+                    NOW_PROCESS_NUM = PROCESS_NUM
+
                     IS_ERROR = TRUE
                     BREAK 3
                 ENDIF
                 
-                DIM IS_IMG = MY_CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                DIM IS_IMG = MY_CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
 
                 IF FAIL_CNT > 0 THEN SLEEP(10)
             
@@ -53,20 +62,33 @@ REPEAT
             UNTIL IS_IMG
 
             DO_PROCESS(PROCESS_NUM)
-            PRINT I + "-" + PROCESS_NUM + "番目の処理を終了"
-            FPUT(FILE_ID,I + "-" + PROCESS_NUM + "番目の処理を終了");
+
+            MSG = I + "-" + PROCESS_NUM + "番目の処理を終了"
+            NOW_PROCESS_NUM = PROCESS_NUM
+            PRINT MSG
+            FPUT(FILE_ID,MSG);
         NEXT
 
-        PRINT I + "週目終了"
-        FPUT(FILE_ID,I + "週目終了")
+        MSG = I + "週目終了"
+        PRINT MSG
+        FPUT(FILE_ID,MSG)
+
+        NOW_PROCESS_NUM = 0
     NEXT
 
+    //エラー発生時の復帰処理
     IFB IS_ERROR
-        IFB RETURN_PROCESS(RETURN_PROCESS_NUM,ERROR_IMG_PATH, WIN_ID,  WIN_X, WIN_Y, WIN_W, WIN_H)
+        MSG = "復帰処理開始"
+        PRINT MSG
+        FPUT(FILE_ID,MSG)
+        IFB RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)
             IS_ERROR = FALSE
+            MSG = "復帰処理成功"
         ELSE
-            BREAK
+            MSG = "復帰処理失敗"
         ENDIF
+        PRINT MSG
+        FPUT(FILE_ID,MSG)
     ENDIF
 UNTIL !IS_ERROR
 
@@ -80,8 +102,10 @@ ENDIF
 
 FCLOSE(FILE_ID);
 
+
+
 //処理
-PROCEDURE DO_PROCESS(VAR P_NUM)
+PROCEDURE DO_PROCESS(P_NUM)
     DIM OFFSET =10
 
     BTN(LEFT,CLICK,G_IMGX_X + OFFSET,G_IMGX_Y + OFFSET)
@@ -94,31 +118,149 @@ PROCEDURE DO_PROCESS(VAR P_NUM)
     ENDIF
 FEND
 
+//ドックの上限を解消するのはまだ実装完了していない
 //エラー発生時の復帰処理
-FUNCTION RETURN_PROCESS(R_NUM,ERROR_IMG_PATH[], WIN_ID,  WIN_X, WIN_Y, WIN_W, WIN_H)
-    FOR I = 0 TO R_NUM
-        
+FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)//FILEIDはデバッグログにつかう
+
+    //エラー発生時の復帰処理に使う画像
+    DIM IS_FULL_ERROR_IMG_PATH[]="", "select_strengthening_button.png", "return_screen__button.png"//あとでかく
+    DIM REBOOT_ERROR_IMG_PATH[] = "title_page.png",  "title_page.png",  "sortie_button_on_menu.png"
+    INIT_IMG_PATH(REBOOT_ERROR_IMG_PATH)
+    INIT_IMG_PATH(IS_FULL_ERROR_IMG_PATH)
+
+    //ドックが上限に達したとき
+    IFB IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+        //いらないものを強化素材として消費する処理
+        MSGBOX("ドック上限到達")
+        FPUT(FILE_ID,"ドック上限到達")
+        IFB !RETURN_PROCESS_FROM_FULL_DOCK(IS_FULL_ERROR_IMG_PATH, WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+            RESULT = FALSE
+            EXIT
+        ENDIF
+    //アプリが落ちて再起動したとき
+    ELSEIF !RETURN_PROCESS_FROM_REBOOT(REBOOT_ERROR_IMG_PATH, WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H)
+        RESULT = FALSE
+        EXIT
+    ENDIF
+
+    RESULT = TRUE
+FEND
+
+//ドックが一杯になったダイアログが表示されているかどうか
+FUNCTION IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+    DIM IMG_PATH[] = "strengthening_button.png"
+    INIT_IMG_PATH(IMG_PATH)
+    RESULT = FALSE
+    IFB MY_CHKIMGX(IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+        BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y)
+        RESULT = TRUE
+    ENDIF
+FEND
+
+//座標は左上と右下
+FUNCTION RETURN_PROCESS_FROM_FULL_DOCK(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+    //適当なかんせんをきめとく
+    //画面を開いたときに画面に移るようにしとく
+    //選択して、おすすめボタンで強化を
+    //強化素材の枠が18検知されるまで続ける
+
+    //処理の高速化のため、強化素材を選ぶ枠の座標をあらかじめ取得しておく
+    DIM MATERIAL_FORM_X = 0
+    DIM MATERIAL_FORM_Y = 0
+    DIM MATERIAL_FORM_IMG_PATH[]="empty_button.png"
+    INIT_IMG_PATH(MATERIAL_FORM_IMG_PATH)
+    IFB MY_CHKIMGX(MATERIAL_FORM_IMG_PATH[0], WIN_ID, (WIN_X + WIN_W) / 2, (WIN_Y + WIN_H) / 2, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+        MATERIAL_FORM_X = G_IMGX_X
+        MATERIAL_FORM_Y = G_IMGX_Y
+        MSGBOX("強化可能チェック")
+        FPUT(FILE_ID,"強化可能チェック")
+    ELSE
+        RESULT = FALSE
+        EXIT
+    ENDIF
+    
+    //復帰処理開始
+    REPEAT
+        FOR PROCESS_NUM = 0 TO LENGTH(ERROR_IMG_PATH) - 1
             DIM FAIL_CNT = 0
             REPEAT
                 IFB FAIL_CNT > 20 
-                RESULT = FALSE
-                EXIT
+                    MSGBOX("復帰処理時エラー")
+                    FPUT(FILE_ID,"復帰処理時エラー")
+                    RESULT = FALSE
+                    EXIT
                 ENDIF
 
-                DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[I], WIN_ID,  WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                //TEST用
+                IS_IMG = TRUE
 
                 IF FAIL_CNT > 0 THEN SLEEP(10)
             
                 FAIL_CNT = FAIL_CNT + 1
             UNTIL IS_IMG
+
+            //ここらへんでクリックやら
+            MSGBOX("復帰処理動作"+PROCESS_NUM)
+            FPUT(FILE_ID,"復帰処理動作"+PROCESS_NUM)
+        NEXT
+    //強化素材の枠がすべてからなら終了
+    UNTIL IS_EMPTY_IN_MATERIAL_FORM(WIN_ID, MATERIAL_FORM_X ,MATERIAL_FORM_Y, WIN_W / 2, WIN_H/ 2)
+
+    //戻るボタンを押してもどる
+    //復帰前の画面から処理を再開する
+    MSGBOX("戻るボタン処理")
+    FPUT(FILE_ID,"戻るボタン処理")
+
+    RESULT = TRUE
+FEND
+
+//強化素材の枠がすべて空いているかどうか
+FUNCTION IS_EMPTY_IN_MATERIAL_FORM(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H)
+    DIM IMG_PATH[] ="empty_button.png"
+    INIT_IMG_PATH(IMG_PATH)
+    RESULT = TRUE
+    IFB MY_CHKIMGX(IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, -1, 5, -1) < 18
+        RESULT = FALSE
+    ENDIF
+FEND
+
+//アプリが落ちたときの復帰処理
+FUNCTION RETURN_PROCESS_FROM_REBOOT(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H)
+    FOR PROCESS_NUM = 0 TO LENGTH(ERROR_IMG_PATH) - 1
+        
+            DIM FAIL_CNT = 0
+            REPEAT
+                IFB FAIL_CNT > 20 
+                    RESULT = FALSE
+                    EXIT
+                ENDIF
+
+                DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+
+                IF FAIL_CNT > 0 THEN SLEEP(10)
+            
+                FAIL_CNT = FAIL_CNT + 1
+            UNTIL IS_IMG
+
+            //ここらへんでクリックやら
     NEXT
 
     RESULT = TRUE
 FEND
 
-FUNCTION MY_CHKIMGX(IMG_PATH,DI,X1,Y1,X2,Y2,NUM,THRESHOLD,TARGET_COLOR)
+//画像認識
+//座標は左上と右下
+FUNCTION MY_CHKIMGX(IMG_PATH,ID,X1,Y1,X2,Y2,NUM,THRESHOLD,TARGET_COLOR)
     startup_chkimgx() //CHKIMGX関数開始
     DIM IS_IMG = CHKIMGX(IMG_PATH, ID,  X1, Y1, X2, Y2, NUM, THRESHOLD, TARGET_COLOR)
     shutdown_chkimgx() //CHKIMGX関数停止
     RESULT = IS_IMG
+FEND
+
+PROCEDURE INIT_IMG_PATH(VAR IMG_PATH[])
+    CONST DIR_PATH="../../img/Azur Lane/"
+    FOR I = 0 TO LENGTH(IMG_PATH) -1 
+        IMG_PATH[I]= DIR_PATH + IMG_PATH[I]
+    NEXT
 FEND
