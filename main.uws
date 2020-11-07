@@ -1,5 +1,10 @@
 CALL ChkImgX.uws
 
+CONST DEBUG_FAILE_NUM = 0 //正常系処理で使用するデバッグ用のエラー判定定数
+CONST DEBUG_FAILE_NUM_IN_RETURN_PROCESS = 20 //復帰処理で使用するデバッグ用のエラー判定定数
+
+CONST CHKIMGX_INTERVAL_TIME_SEC = 10 //1回目の画像認識で見つからなかった場合での次の画像認識までのinterval時間[sec]
+
 DIM CNT = INPUT("周回数を入力してください")
 
 DIM WIN_ID = GETID("NoxPlayer", "Qt5QWindowIcon")
@@ -37,13 +42,14 @@ REPEAT
         FPUT(FILE_ID,MSG)
 
         FOR PROCESS_NUM = NOW_PROCESS_NUM TO LENGTH(IMG_PATH) - 1
-            MSG = I + "-" + PROCESS_NUM + "番目の処理を開始"
+            
+            MSG = I + "-" + PROCESS_NUM + "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) +"番目の処理を開始"
             PRINT  MSG
             FPUT(FILE_ID,MSG)
         
             DIM FAIL_CNT = 0
             REPEAT
-                IFB FAIL_CNT > 20 
+                IFB FAIL_CNT > DEBUG_FAILE_NUM 
                     MSG = "エラー発生"
                     PRINT MSG
                     FPUT(FILE_ID,MSG)
@@ -56,14 +62,14 @@ REPEAT
                 
                 DIM IS_IMG = MY_CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
 
-                IF FAIL_CNT > 0 THEN SLEEP(10)
+                IF FAIL_CNT > 0 THEN SLEEP(CHKIMGX_INTERVAL_TIME_SEC)
             
                 FAIL_CNT = FAIL_CNT + 1
             UNTIL IS_IMG
 
             DO_PROCESS(PROCESS_NUM)
 
-            MSG = I + "-" + PROCESS_NUM + "番目の処理を終了"
+            MSG = I + "-" + PROCESS_NUM +  "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) + "番目の処理を終了"
             NOW_PROCESS_NUM = PROCESS_NUM
             PRINT MSG
             FPUT(FILE_ID,MSG);
@@ -90,7 +96,7 @@ REPEAT
         PRINT MSG
         FPUT(FILE_ID,MSG)
     ENDIF
-UNTIL !IS_ERROR
+UNTIL IS_ERROR
 
 IFB !IS_ERROR 
      MSGBOX("処理完了")
@@ -101,7 +107,8 @@ ELSE
 ENDIF
 
 FCLOSE(FILE_ID);
-
+////////////// ここまでメイン処理 ////////////////////////
+/////////////////////////////////////////////////////////
 
 
 //処理
@@ -120,20 +127,25 @@ FEND
 
 //ドックの上限を解消するのはまだ実装完了していない
 //エラー発生時の復帰処理
-FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)//FILEIDはデバッグログにつかう
+FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)//FILEIDはデバッグログにつかう
 
     //エラー発生時の復帰処理に使う画像
-    DIM IS_FULL_ERROR_IMG_PATH[]="", "select_strengthening_button.png", "return_screen__button.png"//あとでかく
-    DIM REBOOT_ERROR_IMG_PATH[] = "title_page.png",  "title_page.png",  "sortie_button_on_menu.png"
+    PRINT "in RETURN_PROCESS"
+    FPUT(FILE_ID,"in RETURN_PROCESS")
+
+    DIM REBOOT_ERROR_IMG_PATH[] = "title_page.png", "title_page.png", "sortie_button_on_menu.png"
+    DIM DELETE_PROCESS_IMG_PATH[] = "filter.png", "nomal.png", "conform2.png", "conform2.png","conform2.png", "get_item.png", "conform2.png", "conform2.png","get_item.png", "filter.png", "nomal.png", "conform2.png","return_screen_button.png"
+    DIM DELETE_TARGET_IMG_PATH[] =  "cygnet.png", "comet.png", "craven.png", "mccool.png","crescent.png"
     INIT_IMG_PATH(REBOOT_ERROR_IMG_PATH)
-    INIT_IMG_PATH(IS_FULL_ERROR_IMG_PATH)
+    INIT_IMG_PATH(DELETE_PROCESS_IMG_PATH)
+    INIT_IMG_PATH(DELETE_TARGET_IMG_PATH) 
 
     //ドックが上限に達したとき
     IFB IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
-        //いらないものを強化素材として消費する処理
-        MSGBOX("ドック上限到達")
+        //いらないものを削除していく処理
+        PRINT "ドック上限到達"
         FPUT(FILE_ID,"ドック上限到達")
-        IFB !RETURN_PROCESS_FROM_FULL_DOCK(IS_FULL_ERROR_IMG_PATH, WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+        IFB !RETURN_PROCESS_BY_DELETEING(DELETE_PROCESS_IMG_PATH,DELETE_TARGET_IMG_PATH, WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
             RESULT = FALSE
             EXIT
         ENDIF
@@ -148,13 +160,61 @@ FEND
 
 //ドックが一杯になったダイアログが表示されているかどうか
 FUNCTION IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
-    DIM IMG_PATH[] = "strengthening_button.png"
+    PRINT "in IS_FULL"
+    FPUT(FILE_ID,"in IS_FULL")
+    DIM IMG_PATH[] = "organize.png"//かんせんをたいえきさせるボタンを用意
     INIT_IMG_PATH(IMG_PATH)
     RESULT = FALSE
     IFB MY_CHKIMGX(IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
         BTN(LEFT,CLICK,G_IMGX_X,G_IMGX_Y)
         RESULT = TRUE
     ENDIF
+FEND
+
+//かんせんを削除してドックの中を開けていく処理
+FUNCTION RETURN_PROCESS_BY_DELETEING(ERROR_IMG_PATH[], DELETE_TARGET_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)
+    PRINT "in RETURN_PROCESS_BY_DELETING"
+    FPUT(FILE_ID,"in RETURN_PROCESS_PROCESS_BY_DELETING")
+
+    FOR PROCESS_NUM = 0 TO LENGTH(ERROR_IMG_PATH) - 1
+        PRINT ERROR_IMG_PATH[PROCESS_NUM]
+        FPUT(FILE_ID, ERROR_IMG_PATH[PROCESS_NUM])
+
+        DIM FAIL_CNT = 0
+        REPEAT
+            IFB FAIL_CNT > DEBUG_FAILE_NUM_IN_RETURN_PROCESS 
+                RESULT = FALSE
+                EXIT
+            ENDIF
+
+            //削除するものを選んでいく
+            IFB PROCESS_NUM = 3
+                DELETE_TARGET(DELETE_TARGET_IMG_PATH, WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)
+            ENDIF
+            DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+
+            IF FAIL_CNT > 0 THEN SLEEP(CHKIMGX_INTERVAL_TIME_SEC)
+            
+            FAIL_CNT = FAIL_CNT + 1
+        UNTIL IS_IMG
+
+        BTN(LEFT, CLICK, G_IMGX_X, G_IMGX_Y)
+        SLEEP(5)
+    NEXT
+
+    RESULT = TRUE
+FEND
+
+PROCEDURE DELETE_TARGET(DELETE_TARGET_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)
+    FOR PROCESS_NUM = 0 TO LENGTH(DELETE_TARGET_IMG_PATH) - 1
+        PRINT DELETE_TARGET_IMG_PATH[PROCESS_NUM]
+        FPUT(FILE_ID, DELETE_TARGET_IMG_PATH[PROCESS_NUM])
+        REPEAT
+            DIM IS_IMG = MY_CHKIMGX(DELETE_TARGET_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+            BTN(LEFT, CLICK, G_IMGX_X, G_IMGX_Y)
+            SLEEP(1)
+        UNTIL !IS_IMG
+    NEXT
 FEND
 
 //座標は左上と右下
@@ -167,12 +227,12 @@ FUNCTION RETURN_PROCESS_FROM_FULL_DOCK(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, W
     //処理の高速化のため、強化素材を選ぶ枠の座標をあらかじめ取得しておく
     DIM MATERIAL_FORM_X = 0
     DIM MATERIAL_FORM_Y = 0
-    DIM MATERIAL_FORM_IMG_PATH[]="empty_button.png"
+    DIM MATERIAL_FORM_IMG_PATH[] = "empty_button.png"
     INIT_IMG_PATH(MATERIAL_FORM_IMG_PATH)
     IFB MY_CHKIMGX(MATERIAL_FORM_IMG_PATH[0], WIN_ID, (WIN_X + WIN_W) / 2, (WIN_Y + WIN_H) / 2, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
         MATERIAL_FORM_X = G_IMGX_X
         MATERIAL_FORM_Y = G_IMGX_Y
-        MSGBOX("強化可能チェック")
+        PRINT "強化可能チェック"
         FPUT(FILE_ID,"強化可能チェック")
     ELSE
         RESULT = FALSE
@@ -184,24 +244,22 @@ FUNCTION RETURN_PROCESS_FROM_FULL_DOCK(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, W
         FOR PROCESS_NUM = 0 TO LENGTH(ERROR_IMG_PATH) - 1
             DIM FAIL_CNT = 0
             REPEAT
-                IFB FAIL_CNT > 20 
-                    MSGBOX("復帰処理時エラー")
+                IFB FAIL_CNT > DEBUG_FAILE_NUM_IN_RETURN_PROCESS 
+                    PRINT "復帰処理時エラー"
                     FPUT(FILE_ID,"復帰処理時エラー")
                     RESULT = FALSE
                     EXIT
                 ENDIF
 
                 DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
-                //TEST用
-                IS_IMG = TRUE
 
-                IF FAIL_CNT > 0 THEN SLEEP(10)
+                IF FAIL_CNT > 0 THEN SLEEP(CHKIMGX_INTERVAL_TIME_SEC)
             
                 FAIL_CNT = FAIL_CNT + 1
             UNTIL IS_IMG
 
             //ここらへんでクリックやら
-            MSGBOX("復帰処理動作"+PROCESS_NUM)
+            PRINT "復帰処理動作"+PROCESS_NUM
             FPUT(FILE_ID,"復帰処理動作"+PROCESS_NUM)
         NEXT
     //強化素材の枠がすべてからなら終了
@@ -209,7 +267,7 @@ FUNCTION RETURN_PROCESS_FROM_FULL_DOCK(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, W
 
     //戻るボタンを押してもどる
     //復帰前の画面から処理を再開する
-    MSGBOX("戻るボタン処理")
+    PRINT "戻るボタン処理"
     FPUT(FILE_ID,"戻るボタン処理")
 
     RESULT = TRUE
@@ -238,7 +296,7 @@ FUNCTION RETURN_PROCESS_FROM_REBOOT(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_
 
                 DIM IS_IMG = MY_CHKIMGX(ERROR_IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
 
-                IF FAIL_CNT > 0 THEN SLEEP(10)
+                IF FAIL_CNT > 0 THEN SLEEP(CHKIMGX_INTERVAL_TIME_SEC)
             
                 FAIL_CNT = FAIL_CNT + 1
             UNTIL IS_IMG
