@@ -15,8 +15,11 @@ DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 
 //使う画像のパスを処理の順番に並べている
 DIM IMG_PATH[] = "start_stage.png", "sortie_button1.png", "sortie_button2.png", "enemy.png", "result.png", "get_item.png", "confirm_button1.png", "boss.png", "result.png", "get_item.png", "confirm_button1.png"
+DIM DIALOG_IMG_PATH[] = "conform2.png"
 INIT_IMG_PATH(IMG_PATH)
+INIT_IMG_PATH(DIALOG_IMG_PATH)
 
+DIM IS_TIRED = FALSE
 DIM IS_ERROR = FALSE
 DIM NOW_PROCESS_NUM = 0 //エラー発生時に復帰する処理を保持する変数
 
@@ -60,6 +63,12 @@ REPEAT
                     BREAK 3
                 ENDIF
                 
+                IFB IS_TIRED
+                    IFB MY_CHKIMGX(DIALOG_IMG_PATH[0],WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                        BTN(LEFT, CLICK, G_IMGX_X, G_IMGX_Y)
+                        SLEEP(1)
+                    ENDIF
+                ENDIF
                 DIM IS_IMG = MY_CHKIMGX(IMG_PATH[PROCESS_NUM], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
 
                 IF FAIL_CNT > 0 THEN SLEEP(CHKIMGX_INTERVAL_TIME_SEC)
@@ -87,7 +96,7 @@ REPEAT
         MSG = "復帰処理開始"
         PRINT MSG
         FPUT(FILE_ID,MSG)
-        IFB RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)
+        IFB RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID, IS_TIRED)
             IS_ERROR = FALSE
             MSG = "復帰処理成功"
         ELSE
@@ -127,7 +136,7 @@ FEND
 
 //ドックの上限を解消するのはまだ実装完了していない
 //エラー発生時の復帰処理
-FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)//FILEIDはデバッグログにつかう
+FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID, IS_TIRED)//FILEIDはデバッグログにつかう
 
     //エラー発生時の復帰処理に使う画像
     PRINT "in RETURN_PROCESS"
@@ -140,8 +149,10 @@ FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)//FILEIDは�
     INIT_IMG_PATH(DELETE_PROCESS_IMG_PATH)
     INIT_IMG_PATH(DELETE_TARGET_IMG_PATH) 
 
+    IFB IS_TIRED(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H ,FILE_ID)
+        IS_TIRED = TRUE
     //ドックが上限に達したとき
-    IFB IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+    ELSEIF IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
         //いらないものを削除していく処理
         PRINT "ドック上限到達"
         FPUT(FILE_ID,"ドック上限到達")
@@ -156,6 +167,15 @@ FUNCTION RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID)//FILEIDは�
     ENDIF
 
     RESULT = TRUE
+FEND
+
+FUNCTION IS_TIRED(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
+    DIM IMG_PATH[] = "conform2.png"
+    INIT_IMG_PATH(IMG_PATH)
+    RESULT = FALSE
+    IFB MY_CHKIMGX(IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+        RESULT = TRUE
+    ENDIF
 FEND
 
 //ドックが一杯になったダイアログが表示されているかどうか
@@ -216,6 +236,8 @@ PROCEDURE DELETE_TARGET(DELETE_TARGET_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, W
         UNTIL !IS_IMG
     NEXT
 FEND
+
+
 
 //座標は左上と右下
 FUNCTION RETURN_PROCESS_FROM_FULL_DOCK(ERROR_IMG_PATH[], WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
