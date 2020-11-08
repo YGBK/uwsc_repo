@@ -1,6 +1,6 @@
 CALL ChkImgX.uws
 
-CONST DEBUG_FAILE_NUM = 0 //正常系処理で使用するデバッグ用のエラー判定定数
+CONST DEBUG_FAILE_NUM =　20 //正常系処理で使用するデバッグ用のエラー判定定数
 CONST DEBUG_FAILE_NUM_IN_RETURN_PROCESS = 20 //復帰処理で使用するデバッグ用のエラー判定定数
 
 CONST CHKIMGX_INTERVAL_TIME_SEC = 10 //1回目の画像認識で見つからなかった場合での次の画像認識までのinterval時間[sec]
@@ -43,7 +43,7 @@ REPEAT
 
         FOR PROCESS_NUM = NOW_PROCESS_NUM TO LENGTH(IMG_PATH) - 1
             
-            MSG = I + "-" + PROCESS_NUM + "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) +"番目の処理を開始"
+            MSG = I + "週目：" + PROCESS_NUM + "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) +"番目の処理を開始"
             PRINT  MSG
             FPUT(FILE_ID,MSG)
         
@@ -69,7 +69,7 @@ REPEAT
 
             DO_PROCESS(PROCESS_NUM)
 
-            MSG = I + "-" + PROCESS_NUM +  "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) + "番目の処理を終了"
+            MSG = I + "週目：" + PROCESS_NUM +  "/" + VARTYPE(LENGTH(IMG_PATH) - 1 ,8) + "番目の処理を終了"
             NOW_PROCESS_NUM = PROCESS_NUM
             PRINT MSG
             FPUT(FILE_ID,MSG);
@@ -162,7 +162,7 @@ FEND
 FUNCTION IS_FULL(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H,FILE_ID)
     PRINT "in IS_FULL"
     FPUT(FILE_ID,"in IS_FULL")
-    DIM IMG_PATH[] = "organize.png"//かんせんをたいえきさせるボタンを用意
+    DIM IMG_PATH[] = "organize.png"
     INIT_IMG_PATH(IMG_PATH)
     RESULT = FALSE
     IFB MY_CHKIMGX(IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
