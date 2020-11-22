@@ -16,11 +16,14 @@ DIM WIN_H = STATUS(WIN_ID, ST_HEIGHT)
 //使う画像のパスを処理の順番に並べている
 DIM IMG_PATH[] = "start_stage.png", "sortie_button1.png", "sortie_button2.png", "enemy.png", "result.png", "get_item.png", "confirm_button1.png", "boss.png", "result.png", "get_item.png", "confirm_button1.png"
 DIM DIALOG_IMG_PATH[] = "conform2.png"
+DIM RETURNED_IMG_PATH[] = "doing.png"
 INIT_IMG_PATH(IMG_PATH)
 INIT_IMG_PATH(DIALOG_IMG_PATH)
+INIT_IMG_PATH(RETURNED_IMG_PATH)
 
 DIM IS_TIRED = FALSE
 DIM IS_ERROR = FALSE
+DIM IS_RETURNED = FALSE
 DIM NOW_PROCESS_NUM = 0 //エラー発生時に復帰する処理を保持する変数
 
 //ログファイルの準備
@@ -57,14 +60,26 @@ REPEAT
                     PRINT MSG
                     FPUT(FILE_ID,MSG)
 
-                    NOW_PROCESS_NUM = PROCESS_NUM
+                    IFB PROCESS_NUM = 2
+                        NOW_PROCESS_NUM = 0
+                    ELSE
+                        NOW_PROCESS_NUM = PROCESS_NUM
+                    ENDIF
 
                     IS_ERROR = TRUE
                     BREAK 3
                 ENDIF
-                
+
+                IFB IS_RETURNED
+                    IFB MY_CHKIMGX(RETURNED_IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                        BTN(LEFT, CLICK, G_IMGX_X, G_IMGX_Y)
+                        SLEEP(1)
+                        IS_RETURNED = FALSE
+                    ENDIF
+                ENDIF
+
                 IFB IS_TIRED
-                    IFB MY_CHKIMGX(DIALOG_IMG_PATH[0],WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
+                    IFB MY_CHKIMGX(DIALOG_IMG_PATH[0], WIN_ID, WIN_X, WIN_Y, WIN_X + WIN_W, WIN_Y + WIN_H, 1, 5, -1)
                         BTN(LEFT, CLICK, G_IMGX_X, G_IMGX_Y)
                         SLEEP(1)
                     ENDIF
@@ -98,6 +113,7 @@ REPEAT
         FPUT(FILE_ID,MSG)
         IFB RETURN_PROCESS(WIN_ID, WIN_X, WIN_Y, WIN_W, WIN_H, FILE_ID, IS_TIRED)
             IS_ERROR = FALSE
+            IS_RETURNED = TRUE
             MSG = "復帰処理成功"
         ELSE
             MSG = "復帰処理失敗"
