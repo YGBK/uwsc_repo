@@ -28,6 +28,7 @@ DIM IS_TIRED = FALSE
 DIM IS_ERROR = FALSE
 DIM IS_RETURNED = FALSE
 DIM NOW_PROCESS_NUM = 0 //エラー発生時に復帰する処理を保持する変数
+DIM NOW_LAP_NUM = 1
 
 //ログファイルの準備
 GETTIME()
@@ -45,7 +46,7 @@ NEXT
 DIM FILE_ID = FOPEN(LOG_FILE_NAME,F_WRITE);
 
 REPEAT
-    FOR I=1 TO CNT
+    FOR I = NOW_LAP_NUM TO CNT
         DIM MSG = I + "週目開始"
         PRINT MSG
         FPUT(FILE_ID,MSG)
@@ -68,6 +69,7 @@ REPEAT
                     ELSE
                         NOW_PROCESS_NUM = PROCESS_NUM
                     ENDIF
+                    NOW_LAP_NUM = I
 
                     IS_ERROR = TRUE
                     BREAK 3
