@@ -6,6 +6,9 @@ CONST DEBUG_FAILE_NUM_IN_RETURN_PROCESS = 20 //復帰処理で使用するデバ
 CONST CHKIMGX_INTERVAL_TIME_SEC = 10 //1回目の画像認識で見つからなかった場合での次の画像認識までのinterval時間[sec]
 
 DIM CNT = INPUT("周回数を入力してください")
+IFB CNT = ""
+    EXITEXIT
+ENDIF
 
 DIM WIN_ID = GETID("NoxPlayer", "Qt5QWindowIcon")
 DIM WIN_X = STATUS(WIN_ID, ST_X)
